@@ -51,10 +51,17 @@ type resourceData struct {
 
 func NewResourcesAggregator(sysfsRoot string, podResourceClient podresourcesapi.PodResourcesListerClient) (ResourcesAggregator, error) {
 	var err error
-
+	log.Printf("NewResourcesAggregator sysfsRoot: %s", sysfsRoot)
 	topo, err := ghw.Topology(ghw.WithChroot(sysfsRoot))
 	if err != nil {
 		return nil, err
+	}
+	log.Printf("ghw topo : %v\n", topo)
+	for _, node := range topo.Nodes {
+		fmt.Printf("node: %v, node ID: %v \n", node, node.ID)
+		for _, core := range node.Cores {
+			fmt.Printf("  %v\n", core)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultPodResourcesTimeout)
@@ -65,7 +72,6 @@ func NewResourcesAggregator(sysfsRoot string, podResourceClient podresourcesapi.
 	if err != nil {
 		return nil, fmt.Errorf("Can't receive response: %v.Get(_) = _, %v", podResourceClient, err)
 	}
-
 	return NewResourcesAggregatorFromData(topo, resp), nil
 }
 
@@ -138,8 +144,11 @@ func GetContainerDevicesFromAllocatableResources(availRes *podresourcesapi.Alloc
 	for _, dev := range availRes.GetDevices() {
 		contDevs = append(contDevs, dev)
 	}
+	log.Printf("availRes.GetDevices(): %v\n", availRes.GetDevices())
+	log.Printf("availRes.GetCpuIds(): %v\n", availRes.GetCpuIds())
 
 	cpuIDToNodeIDMap := MakeLogicalCoreIDToNodeIDMap(topo)
+	log.Printf("cpuIDToNodeIDMap: %v", cpuIDToNodeIDMap)
 
 	cpusPerNuma := make(map[int][]string)
 	for _, cpuID := range availRes.GetCpuIds() {
@@ -153,6 +162,7 @@ func GetContainerDevicesFromAllocatableResources(availRes *podresourcesapi.Alloc
 		cpuIDList = append(cpuIDList, fmt.Sprintf("%d", cpuID))
 		cpusPerNuma[nodeID] = cpuIDList
 	}
+	log.Printf("cpusPerNuma: %v", cpusPerNuma)
 
 	for nodeID, cpuList := range cpusPerNuma {
 		contDevs = append(contDevs, &podresourcesapi.ContainerDevices{

@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/node-feature-discovery/pkg/podres"
 	"sigs.k8s.io/node-feature-discovery/pkg/resourcemonitor"
 	"sigs.k8s.io/node-feature-discovery/pkg/version"
+	"sigs.k8s.io/node-feature-discovery/pkg/topologypolicy"
 )
 
 const (
@@ -61,6 +62,8 @@ func main() {
 		}
 		tmPolicy = klConfig.TopologyManagerPolicy
 		log.Printf("Detected kubelet Topology Manager policy %q", tmPolicy)
+		tmPolicy = string(topologypolicy.DetectTopologyPolicy(tmPolicy, ""))
+		log.Printf("Detected Topology Manager policy %q", tmPolicy)
 	} // Otherwise get TopologyManagerPolicy from configz-endpoint
 
 	podResClient, err := podres.GetPodResClient(resourcemonitorArgs.PodResourceSocketPath)
